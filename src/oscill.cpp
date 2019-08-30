@@ -15,6 +15,10 @@ int main(int argc, char * args[]) {
         return 1;
     }
 
+    TTF_Font *font;
+    if( !( font = get_font( "Anonymous_Pro" ) ) )
+        return 1;
+
     /* Draw the initial graphics to the renderer. */
 
     /* Fill the window with black. */
@@ -58,28 +62,31 @@ int main(int argc, char * args[]) {
 
     /* Create the frequency and sample rate sliders. */
     SDL_Slider frequency_slider( r, 10, 10, (SCREEN_WIDTH / 2) - 20,
-            40, 0.5, &frequency,
+            40, &frequency,
             [](double proportion) {
                 if(proportion < 0) proportion = 0;
                 else if(proportion > 1) proportion = 1;
                 return pow(10, ((1 - proportion) * log10(MIN_FREQUENCY)) +
                         (proportion * log10(MAX_FREQUENCY)));
-            }
+            },
+            0.5, font, "frequency"
     );
 
     SDL_Slider sample_slider( r, (SCREEN_WIDTH / 2) + 10, 10,
-            (SCREEN_WIDTH / 2) - 20, 40, 0.5, &sample_rate,
+            (SCREEN_WIDTH / 2) - 20, 40, &sample_rate,
             [](double proportion) {
                 if(proportion < 0) proportion = 0;
                 else if(proportion > 1) proportion = 1;
                 return ((1-proportion) * MIN_SAMPLE_RATE) +
                         (proportion * MAX_SAMPLE_RATE);
-            }
+            },
+            0.5, font, "sample rate"
     );
 
     double test_val = 0;
     SDL_Slider test_slider( r, 10, SCREEN_HEIGHT - 50, (SCREEN_WIDTH / 2) - 20,
-            40, 0.5, &test_val, [](double proportion) { return 0.0; } );
+            40, &test_val, [](double proportion) { return 0.0; }, 0.5,
+            font, "ABCD EFGy" );
 
     /* Run the application until we get the quit signal. */
     int quit = 0;

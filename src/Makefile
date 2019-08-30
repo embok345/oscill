@@ -1,23 +1,27 @@
-LIBRARY_PATH = -L/home/poulter/lib
-INCLUDE_PATH = -I/home/poulter/include
-
-EXECUTABLE_PATH = ../bin/
+MK_PATH = $(abspath $(lastword $(MAKEFILE_LIST)))
+SRC_DIR = $(dir $(MK_PATH))
+EX_DIR = $(SRC_DIR)../bin/
+EX_NAME = oscill
 
 CC = g++
 
-CFLAGS = -std=gnu++11 -g -Wall -Wno-unused-variable -Wno-unused-but-set-variable
+WFLAGS = -Wall -Wno-unused-variable -Wno-unused-but-set-variable
+CFLAGS = -std=gnu++11 -g $(WFLAGS)
 LDFLAGS = -lm
-SDLFLAGS = -lSDL2 $(sdl2-config --libs --cflags)
-OBJ = sdl_util.o slider.o oscill.o
+SDLFLAGS = -lSDL2 -lSDL2_ttf $(sdl2-config --libs --cflags)
+OBJS = sdl_util.o slider.o oscill.o
 
-NAME = oscill
-
+slider.o: slider.cpp slider.h
+	$(CC) -c -o $@ $< $(CFLAGS)
+oscill.o: oscill.cpp oscill.h slider.h
+	$(CC) -c -o $@ $< $(CFLAGS)
 %.o: %.cpp
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-oscill : $(OBJ)
-	$(CC) $^ -o $(EXECUTABLE_PATH)$@ $(CFLAGS) $(LDFLAGS) $(SDLFLAGS) $(LIBRARY_PATH) $(INCLUDE_PATH)
+
+$(EX_NAME) : $(OBJS)
+	$(CC) $^ -o $(EX_DIR)$(EX_NAME) $(CFLAGS) $(LDFLAGS) $(SDLFLAGS)
 
 .PHONY: clean
 clean:
-	rm -f *.o *~ core
+	rm -f *.o *~ core $(EX_DIR)$(EX_NAME)

@@ -2,7 +2,9 @@
 #define OSCILL_H
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include "slider.h"
+#include "sdl_util.h"
 
 /* The width and height of the window to be shown. */
 #define SCREEN_WIDTH 640
@@ -26,10 +28,5 @@
 #define MS_PER_S 1000.0
 
 #define M_TAU (2 * M_PI)
-
-
-/* sdl_util.c */
-int init(SDL_Window **, SDL_Renderer **, int, int);
-void close(SDL_Window **, SDL_Renderer **);
 
 #endif

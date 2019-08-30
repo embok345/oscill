@@ -1,4 +1,5 @@
 #include "slider.h"
+#include "sdl_util.h"
 
 /* Create a slider with the given position and size.
  * ----------------------------------------------------------------------------
@@ -14,8 +15,9 @@
  *                         value, given some proportion.
  */
 SDL_Slider::SDL_Slider( SDL_Renderer *r, int x, int y, int w, int h,
-                           double start_state, double *bind,
-                           double (*calculate_value)(double) ) {
+                           double *bind, double (*calculate_value)(double),
+                           double start_state, TTF_Font *font,
+                           const char *label) {
     this->r = r;
     this->calculate_value = calculate_value;
     bound_value = bind;
@@ -48,6 +50,11 @@ SDL_Slider::SDL_Slider( SDL_Renderer *r, int x, int y, int w, int h,
     SDL_SetRenderDrawColor( this->r, 200, 200, 200, SDL_ALPHA_OPAQUE );
     SDL_RenderFillRect( this->r, &(slider) );
 
+    this->label = { font, label };
+    if( font && label ) {
+        render_text( r, font, label, x + (w / 2), y + (h / 2), true );
+    }
+
     SDL_AddEventWatch( SDL_Slider::slider_event_filter, this );
 }
 
@@ -71,6 +78,11 @@ void SDL_Slider::update_proportion(double new_proportion) {
     slider.w = proportion * background.w;
     SDL_SetRenderDrawColor( r, 200, 200, 200, SDL_ALPHA_OPAQUE );
     SDL_RenderFillRect( r, &slider );
+
+    if(label.font && label.label) {
+        render_text( r, label.font, label.label, boundary.x + (boundary.w / 2),
+                boundary.y + (boundary.h / 2), true );
+    }
 
     *bound_value = calculate_value(proportion);
 }

@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 
 /* Initialises SDL library, and the main window in which to draw.
  * ----------------------------------------------------------------------------
@@ -38,6 +39,87 @@ int init(SDL_Window **w, SDL_Renderer **r, int width, int height) {
 
     SDL_SetRenderDrawBlendMode( *r, SDL_BLENDMODE_BLEND );
 
+    /* Try to init text. */
+    if( !TTF_WasInit() && TTF_Init() == -1 ) {
+        /* If we couldn't init text, return failure. */
+        printf( "Couldn't init text. %s\n", TTF_GetError() );
+        return 0;
+    }
+
+    return 1;
+}
+
+TTF_Font *get_font(const char *font_name) {
+    TTF_Font *font;
+    const char *path = "../res/font/";
+    char *font_path = (char *)malloc( strlen(font_name) + strlen(path) + 1 );
+    sprintf(font_path, "%s%s.ttf", path, font_name);
+    font = TTF_OpenFont( font_path, 24 );
+
+    if( !font ) {
+        printf("Could not get font. %s\n", TTF_GetError() );
+    }
+
+    free( font_path );
+
+    return font;
+}
+
+int render_text( SDL_Renderer *r, TTF_Font *font, const char *text,
+                    int x, int y, bool centered) {
+    SDL_Color white = { 255, 255, 255 }, black = { 0, 0, 0 };
+
+    int outline = 1;
+
+    TTF_SetFontOutline( font, outline );
+
+    SDL_Surface *text_surface;
+    SDL_Color text_color = black;
+    if( !( text_surface = TTF_RenderText_Blended( font, text, text_color ) ) ) {
+        printf( "Could not draw text. %s\n", TTF_GetError() );
+        return 0;
+    }
+
+    SDL_Texture *text_texture = SDL_CreateTextureFromSurface(r, text_surface);
+    int text_width, text_height;
+    if( TTF_SizeText( font, text, &text_width, &text_height ) == -1 ) {
+        printf( "Could not get text size. %s\n", SDL_GetError() );
+        return 0;
+    }
+    SDL_Rect text_rect;
+    if( centered ) {
+        text_rect = { x - (text_width / 2), y - (text_height / 2),
+                text_width, text_height };
+        if(text_width % 2 == 1)
+            text_rect.x -= 1;
+    } else {
+        text_rect = { x, y, text_width, text_height };
+    }
+    SDL_RenderCopy( r, text_texture, NULL, &text_rect );
+    SDL_FreeSurface( text_surface );
+
+    TTF_SetFontOutline( font, 0 );
+    text_color = white;
+    if( !( text_surface = TTF_RenderText_Blended( font, text, text_color ) ) ) {        printf( "Could not draw text. %s\n", TTF_GetError() );
+        return 0;
+    }
+    text_texture = SDL_CreateTextureFromSurface( r, text_surface );
+
+    if( TTF_SizeText( font, text, &text_width, &text_height ) == -1 ) {
+        printf( "Could not get text size. %s\n", SDL_GetError() );
+        return 0;
+    }
+    if( centered ) {
+        text_rect = { x - (text_width / 2), y - (text_height / 2),
+                text_width, text_height };
+    } else {
+        text_rect = { x, y, text_width, text_height };
+    }
+
+    SDL_RenderCopy( r, text_texture, NULL, &text_rect );
+
+    SDL_FreeSurface( text_surface );
+
     return 1;
 }
 
@@ -51,6 +133,9 @@ void close( SDL_Window **w, SDL_Renderer **r ) {
     SDL_DestroyWindow( *w );
     *r = NULL;
     *w = NULL;
+
+    if( TTF_WasInit() )
+        TTF_Quit();
 
     SDL_Quit();
 }
