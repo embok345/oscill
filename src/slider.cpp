@@ -52,7 +52,7 @@ SDL_Slider::SDL_Slider( SDL_Renderer *r, int x, int y, int w, int h,
 
     this->label = { font, label };
     if( font && label ) {
-        render_text( r, font, label, x + (w / 2), y + (h / 2), true );
+        render_outlined_text( r, font, label, x + (w / 2), y + (h / 2), true );
     }
 
     SDL_AddEventWatch( SDL_Slider::slider_event_filter, this );
@@ -79,9 +79,11 @@ void SDL_Slider::update_proportion(double new_proportion) {
     SDL_SetRenderDrawColor( r, 200, 200, 200, SDL_ALPHA_OPAQUE );
     SDL_RenderFillRect( r, &slider );
 
+    /* Rerender the text onto the slider. */
     if(label.font && label.label) {
-        render_text( r, label.font, label.label, boundary.x + (boundary.w / 2),
-                boundary.y + (boundary.h / 2), true );
+        render_outlined_text( r, label.font, label.label,
+                boundary.x + (boundary.w / 2), boundary.y + (boundary.h / 2),
+                true );
     }
 
     *bound_value = calculate_value(proportion);
