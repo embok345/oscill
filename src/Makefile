@@ -11,7 +11,10 @@ LDFLAGS = -lm
 SDLFLAGS = -lSDL2 -lSDL2_ttf $(sdl2-config --libs --cflags)
 OBJS = sdl_util.o signals.o slider.o oscill.o
 
-GLOB_DEPS = slider.h sdl_util.h consts.h
+GLOB_DEPS = slider.h sdl_util.h consts.h elements.h
+
+$(EX_NAME) : $(OBJS)
+	$(CC) $^ -o $(EX_DIR)$(EX_NAME) $(CFLAGS) $(LDFLAGS) $(SDLFLAGS)
 
 slider.o: slider.cpp slider.h $(GLOB_DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
@@ -22,8 +25,10 @@ signals.o: signals.cpp signals.h $(GLOB_DEPS)
 %.o: %.cpp $(GLOB_DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-$(EX_NAME) : $(OBJS)
-	$(CC) $^ -o $(EX_DIR)$(EX_NAME) $(CFLAGS) $(LDFLAGS) $(SDLFLAGS)
+TEST_DEPS = test.cpp elements.h consts.h
+
+test: $(TEST_DEPS)
+	$(CC) -o $@ $< $(CFLAGS) $(LDFLAGS) $(SDLFLAGS)
 
 .PHONY: clean
 clean:

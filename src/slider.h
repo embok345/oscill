@@ -1,5 +1,6 @@
 #ifndef SLIDER_H
 #define SLIDER_H
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include "sdl_util.h"

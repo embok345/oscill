@@ -45,28 +45,36 @@ void Signal::add_wave(Wave *w) {
     waves.push_back(w);
 }
 
-void Signal::create_sliders( TTF_Font *font, int y ) {
+void Signal::create_sliders( TTF_Font *font ) {
+
     Wave *w = waves.front();
 
-    frequency = new SDL_Slider<double>(settings_window, 10, y + 10,
-            (SCREEN_WIDTH / 2) - 20, 40, &(w->frequency),
-            [](double proportion) {
-                return log_average( MIN_FREQUENCY, MAX_FREQUENCY, 10,
-                        proportion);
-            }, 0.5, font, "frequency" );
+    signal_settings_pane = new HorizontalPane ( 5 );
+    auto c_1 = new VerticalPane( 5 );
+    auto c_2 = new VerticalPane( 5 );
 
-    amplitude = new SDL_Slider<double>( settings_window,
-            (SCREEN_WIDTH / 2) + 10, y + 10, (SCREEN_WIDTH / 2) - 20, 40,
+    auto frequency = new Slider<double>( (SCREEN_WIDTH / 2) - 20, 40,
+            &(w->frequency),
+            [](double p) {
+                return log_average( MIN_FREQUENCY, MAX_FREQUENCY, 10, p);
+            }, 0.5, "frequency", font );
+
+    auto amplitude = new Slider<double>( (SCREEN_WIDTH / 2) - 20, 40,
             &(w->amplitude),
-            [](double proportion) {
-                return average( 20, MAX_AMPLITUDE, proportion );
-            }, 0.5, font, "amplitude" );
+            [](double p) { return average( 20, MAX_AMPLITUDE, p ); }, 0.5,
+            "amplitude", font);
 
-    colour = new SDL_Slider<SDL_Colour>( settings_window, 10, y + 60,
-            SCREEN_WIDTH - 20, 40, &c, colour_proportion );
+    auto colour = new Slider<SDL_Colour>( ( SCREEN_WIDTH / 2) - 20, 40, &c,
+            colour_proportion, 0.5, "", font);
 
-    settings_window.increase_height(100);
+    c_1->add_child(frequency);
+    c_2->add_child(amplitude);
+    c_2->add_child(colour);
 
+    signal_settings_pane->add_child(c_1);
+    signal_settings_pane->add_child(c_2);
+
+    root_settings_pane.add_child(signal_settings_pane);
 }
 
 Signal operator+(Wave *w, const Signal &s) {

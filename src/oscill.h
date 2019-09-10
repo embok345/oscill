@@ -7,5 +7,6 @@
 #include "slider.h"
 #include "signals.h"
 #include "sdl_util.h"
+#include "elements.h"
 
 #endif

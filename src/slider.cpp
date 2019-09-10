@@ -1,7 +1,8 @@
-#include "slider.h"
+//#include "slider.h"
+#include "elements.h"
 
-template<>
-void SDL_Slider<int>::draw_label() {
+/*template<>
+void Slider<int>::draw_label() {
     if(label.font && label.label) {
         auto text = new char[ strlen( label.label ) + 11 ];
         snprintf( text, strlen( label.label ) + 10, "%s: %d", label.label,
@@ -11,9 +12,9 @@ void SDL_Slider<int>::draw_label() {
                 true );
         delete[] text;
     }
-}
+}*/
 
-template<>
+/*template<>
 void SDL_Slider<double>::draw_label() {
     if(label.font && label.label) {
         auto text = new char[ strlen( label.label ) + 11 ];
@@ -24,9 +25,9 @@ void SDL_Slider<double>::draw_label() {
                 true );
         delete[] text;
     }
-}
+}*/
 
-template<>
+/*template<>
 void SDL_Slider<SDL_Colour>::update_proportion(double new_proportion) {
     if(new_proportion < 0) proportion = 0;
     else if(new_proportion > 1) proportion = 1;
@@ -40,12 +41,30 @@ void SDL_Slider<SDL_Colour>::update_proportion(double new_proportion) {
             bound_value->b, SDL_ALPHA_OPAQUE );
     SDL_RenderFillRect( r.get_renderer(), &slider );
 
-    /* Rerender the text onto the slider. */
     draw_label( );
+}*/
+
+template<>
+void Slider<SDL_Colour>::render( SDL_Renderer *r, int x, int y ) {
+    boundary.x = x;
+    boundary.y = y;
+    SDL_SetRenderDrawColor( r, 255, 255, 255, SDL_ALPHA_OPAQUE );
+    SDL_RenderDrawRect( r, &boundary );
+
+    /*SDL_Rect background { x + 1, y + 1, w - 2, h - 2 };
+    SDL_SetRenderDrawColor( r, 0, 0, 0, SDL_ALPHA_OPAQUE );
+    SDL_RenderFillRect( r, &background );*/
+
+    SDL_Rect slider { x + 1, y + 1, w - 2, h - 2 };
+    SDL_SetRenderDrawColor( r, bound_value->r, bound_value->g, bound_value->b,
+            SDL_ALPHA_OPAQUE );
+    SDL_RenderFillRect( r, &slider );
+
+    label.render( r, x + 1, y + 1 );
 }
 
 template<>
-void SDL_Slider<SDL_Colour>::handle_mousewheel(SDL_MouseWheelEvent e) {
+void Slider<SDL_Colour>::handle_mousewheel(SDL_MouseWheelEvent e) {
     SDL_Point mouse_location;
     SDL_GetMouseState(&(mouse_location.x), &(mouse_location.y));
 

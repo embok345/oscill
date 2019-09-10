@@ -49,19 +49,6 @@ class SDL_WindowRenderer {
     SDL_Window *get_window( ) { return w; }
 };
 
-class VerticalPane : public SDL_WindowRenderer {
-
-    int used_height = 0;
-
-  public:
-
-    VerticalPane( int w, int h, const char *title) : SDL_WindowRenderer( w, h, title ) { }
-
-    void increase_height(int amount) { used_height += amount; }
-    int get_used_height( ) { return used_height; }
-
-};
-
 int init();
 void close();
 TTF_Font *get_font( );
