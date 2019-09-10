@@ -5,6 +5,8 @@
 
 #include <SDL2/SDL.h>
 #include "consts.h"
+#include "sdl_util.h"
+#include "slider.h"
 
 struct Wave {
     double frequency;
@@ -14,40 +16,57 @@ struct Wave {
 
 class Signal {
 
-    SDL_Renderer *r;
+    SDL_WindowRenderer& signal_window;
+    VerticalPane& settings_window;
+    std::vector<Wave *> waves;
 
-    std::vector<double *> frequencies;
-    std::vector<double *> phases;
-    std::vector<double *> amplitudes;
+    SDL_Slider<double> *frequency = NULL;
+    SDL_Slider<double> *amplitude = NULL;
+    SDL_Slider<SDL_Colour> *colour = NULL;
 
   protected:
     SDL_Point *points;
-    SDL_Color c;
+    SDL_Colour c;
     int no_points;
 
   private:
-    Signal( SDL_Renderer *r, int no_points, std::vector<double *> frequencies, std::vector<double *> phases, std::vector<double *> amplitudes, SDL_Color c) : r { r }, frequencies { frequencies }, phases { phases }, amplitudes { amplitudes }, c { c }, no_points { no_points } {
-        points = new SDL_Point[this->no_points];
+
+    Signal( SDL_WindowRenderer& signal_window,
+               VerticalPane& settings_window, int no_points,
+               std::vector<Wave *> waves, SDL_Colour c, TTF_Font *font )
+            : signal_window { signal_window },
+              settings_window { settings_window }, waves { waves },
+              c { c },no_points { no_points } {
+        points = new SDL_Point[no_points];
+        create_sliders( font, settings_window.get_used_height() );
     }
+
+    void create_sliders( TTF_Font *, int );
 
   public:
 
-    Signal(SDL_Renderer *r, int no_points, double *frequency, double *phase, double *amplitude, SDL_Color c) : r { r }, c { c }, no_points { no_points } {
-        points = new SDL_Point[this->no_points];
-        frequencies.push_back(frequency);
-        phases.push_back(phase);
-        amplitudes.push_back(amplitude);
+    Signal( SDL_WindowRenderer& signal_window,
+               VerticalPane& settings_window, int no_points, Wave *wave,
+               SDL_Colour c, TTF_Font *font )
+            : signal_window { signal_window },
+              settings_window { settings_window }, c { c },
+              no_points { no_points } {
+        points = new SDL_Point[no_points];
+        waves.push_back(wave);
+        create_sliders( font, settings_window.get_used_height() );
     }
 
-    Signal( const Signal &s ) : Signal( s.r, s.no_points, s.frequencies, s.phases, s.amplitudes, s.c ) {}
+    Signal( const Signal &s ) : Signal( s.signal_window, s.settings_window,
+            s.no_points, s.waves, s.c, NULL ) { }
 
     virtual SDL_Point update_point( int, time_t );
 
-    void add_wave( double *, double *, double * );
-
+    void add_wave(Wave *);
     void draw_line( int, int );
 
-    friend Signal operator+(const Signal &s1, const Signal &s2);
+    friend Signal operator+(const Signal &, const Signal &);
+    friend Signal operator+(const Signal &, Wave *);
+    friend Signal operator+(Wave *, const Signal &);
 
 };
 
@@ -58,12 +77,14 @@ class ModulatedSignal: public Signal {
     double *modulation_phase;
 
   public:
-    ModulatedSignal( Signal s, double *sensitivity, double *frequency, double *phase, SDL_Color c ) : Signal( s ), modulation_sensitivity { sensitivity }, modulation_frequency { frequency }, modulation_phase { phase } {
-        this->c = c;
+    ModulatedSignal( Signal s, double *sensitivity, double *frequency,
+                        double *phase, SDL_Colour c )
+            : Signal( s ), modulation_sensitivity { sensitivity },
+            modulation_frequency { frequency }, modulation_phase { phase } {
+        Signal::c = c;
     }
 
     virtual SDL_Point update_point( int, time_t ) override;
-
 };
 
 #endif

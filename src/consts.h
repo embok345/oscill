@@ -10,7 +10,7 @@
 #define MAX_FREQUENCY 10
 
 /* The minimum and maximum values for the sample rate from the wave. */
-#define MIN_SAMPLE_RATE 1
+#define MIN_SAMPLE_RATE 10
 #define MAX_SAMPLE_RATE 100
 
 /* The maximum amplitude of the wave. */

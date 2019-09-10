@@ -1,5 +1,3 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <unistd.h>
@@ -7,44 +5,19 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include "consts.h"
+#include "sdl_util.h"
 
-/* Initialises SDL library, and the main window in which to draw.
+/* Initialises the SDL library.
  * ----------------------------------------------------------------------------
- * SDL_Window **w   -- A pointer to the SDL window to be initialised.
- * SDL_Renderer **r -- A pointer to the SDL renderer to be initialised.
- * int width        -- The width of the window to be created.
- * int height       -- The height of the window to be created.
- *
  * return           -- 1 if everything initialised fine, 0 if not.
  */
-int init(SDL_Window **w, SDL_Renderer **r, int width, int height) {
+int init(  ) {
     /* Try to init SDL. */
-    if( SDL_Init( SDL_INIT_VIDEO ) < 0) {
+    if( !SDL_WasInit( SDL_INIT_VIDEO ) && SDL_Init( SDL_INIT_VIDEO ) < 0) {
         /* If we couldn't init SDL, print the error and return failure. */
         printf("Could not init SDL. %s\n", SDL_GetError());
         return 0;
     }
-
-    /* Try to create the main window. */
-    *w = SDL_CreateWindow( "Test", SDL_WINDOWPOS_UNDEFINED,
-            SDL_WINDOWPOS_UNDEFINED, width, height,
-            SDL_WINDOW_SHOWN );
-
-    if( !(*w) ) {
-        /* If we can't create the window, print the error, return falure. */
-        printf("Could not create window. %s\n", SDL_GetError() );
-        return 0;
-    }
-
-    /* Try to create the renderer of the window. */
-    *r = SDL_CreateRenderer( *w, -1, SDL_RENDERER_ACCELERATED );
-    if( !(*r) ) {
-        /* If we can't create the renderer, print the error, return failure. */
-        printf("Could not create renderer. %s\n", SDL_GetError() );
-        return 0;
-    }
-
-    SDL_SetRenderDrawBlendMode( *r, SDL_BLENDMODE_BLEND );
 
     /* Try to init text. */
     if( !TTF_WasInit() && TTF_Init() == -1 ) {
@@ -55,7 +28,6 @@ int init(SDL_Window **w, SDL_Renderer **r, int width, int height) {
 
     return 1;
 }
-
 
 void find_mono_fonts( const char *dir_name, char ***fonts, int *current_fonts ) {
 
@@ -170,7 +142,7 @@ TTF_Font *get_font( void ) {
  *
  * return           -- 1 if the text was successfully renderer, 0 otherwise.
  */
-int render_outlined_text( SDL_Renderer *r, TTF_Font *font, const char *text,
+int render_outlined_text( SDL_WindowRenderer& r, TTF_Font *font, const char *text,
                     int x, int y, bool centered) {
     SDL_Color white = { 255, 255, 255 }, black = { 0, 0, 0 };
 
@@ -185,7 +157,8 @@ int render_outlined_text( SDL_Renderer *r, TTF_Font *font, const char *text,
         printf( "Could not draw text. %s\n", TTF_GetError() );
         return 0;
     }
-    SDL_Texture *text_texture = SDL_CreateTextureFromSurface(r, text_surface);
+    SDL_Texture *text_texture = SDL_CreateTextureFromSurface(r.get_renderer(),
+            text_surface);
 
     /* Get the size of text. */
     int text_width, text_height;
@@ -211,7 +184,7 @@ int render_outlined_text( SDL_Renderer *r, TTF_Font *font, const char *text,
     }
 
     /* Render the outline text. */
-    SDL_RenderCopy( r, text_texture, NULL, &text_rect );
+    SDL_RenderCopy( r.get_renderer(), text_texture, NULL, &text_rect );
     SDL_FreeSurface( text_surface );
 
     /* Draw now the inner text, in the same way. */
@@ -220,47 +193,109 @@ int render_outlined_text( SDL_Renderer *r, TTF_Font *font, const char *text,
     if( !( text_surface = TTF_RenderText_Blended( font, text, text_color ) ) ) {        printf( "Could not draw text. %s\n", TTF_GetError() );
         return 0;
     }
-    text_texture = SDL_CreateTextureFromSurface( r, text_surface );
+    text_texture = SDL_CreateTextureFromSurface( r.get_renderer(),
+            text_surface );
 
-    if( TTF_SizeText( font, text, &text_width, &text_height ) == -1 ) {
-        printf( "Could not get text size. %s\n", SDL_GetError() );
-        return 0;
-    }
-    if( centered ) {
-        text_rect = { x - (text_width / 2), y - (text_height / 2),
-                text_width, text_height };
-    } else {
-        text_rect = { x, y, text_width, text_height };
-    }
+    text_rect.x+=1;
+    text_rect.y+=1;
+    text_rect.w-=1;
+    text_rect.h-=2;
 
-    SDL_RenderCopy( r, text_texture, NULL, &text_rect );
+    SDL_RenderCopy( r.get_renderer(), text_texture, NULL, &text_rect );
 
     SDL_FreeSurface( text_surface );
 
     return 1;
 }
 
-void set_scene( SDL_Renderer *r, SDL_Rect *graph_rect ) {
+void set_scene( SDL_WindowRenderer& r ) {
 
     /* Clear the screen. */
-    SDL_SetRenderDrawColor( r, 0, 0, 0, SDL_ALPHA_OPAQUE);
-    SDL_RenderFillRect( r, graph_rect );
+    SDL_SetRenderDrawColor( r.get_renderer(), 0, 0, 0, SDL_ALPHA_OPAQUE);
+    SDL_RenderClear( r.get_renderer() );
 
     /* Draw the top and bottom guide lines. */
-    SDL_SetRenderDrawColor( r, 255, 0, 0, SDL_ALPHA_OPAQUE);
-    SDL_RenderDrawLine( r, 0, ZERO_LEVEL - MAX_AMPLITUDE, SCREEN_WIDTH,
-            ZERO_LEVEL - MAX_AMPLITUDE );
-    SDL_RenderDrawLine( r, 0, ZERO_LEVEL + MAX_AMPLITUDE, SCREEN_WIDTH,
-            ZERO_LEVEL + MAX_AMPLITUDE );
+    SDL_SetRenderDrawColor( r.get_renderer(), 255, 0, 0, SDL_ALPHA_OPAQUE);
+    SDL_RenderDrawLine( r.get_renderer(), 0, ZERO_LEVEL - MAX_AMPLITUDE,
+            SCREEN_WIDTH, ZERO_LEVEL - MAX_AMPLITUDE );
+    SDL_RenderDrawLine( r.get_renderer(), 0, ZERO_LEVEL + MAX_AMPLITUDE,
+            SCREEN_WIDTH, ZERO_LEVEL + MAX_AMPLITUDE );
 
     /* Draw the center guide line. */
-    SDL_SetRenderDrawColor( r, 0, 255, 0, SDL_ALPHA_OPAQUE);
-    SDL_RenderDrawLine( r, 0, ZERO_LEVEL, SCREEN_WIDTH, ZERO_LEVEL );
+    SDL_SetRenderDrawColor( r.get_renderer(), 0, 255, 0, SDL_ALPHA_OPAQUE);
+    SDL_RenderDrawLine( r.get_renderer(), 0, ZERO_LEVEL, SCREEN_WIDTH,
+            ZERO_LEVEL );
     /* Draw a black line, otherwise the alpha goes weird.
      * TODO i'm sure there is a correct way to make sure the blending
      * doesn't go weird. */
-    SDL_SetRenderDrawColor( r, 0, 0, 0, SDL_ALPHA_OPAQUE );
-    SDL_RenderDrawLine( r, 0, 0, 2, 0 );
+    SDL_SetRenderDrawColor( r.get_renderer(), 0, 0, 0, SDL_ALPHA_OPAQUE );
+    SDL_RenderDrawLine( r.get_renderer(), 0, 0, 2, 0 );
+}
+
+SDL_Colour colour_proportion(double proportion) {
+    if(proportion < 0) proportion = 0;
+    else if(proportion > 1) proportion = 1;
+
+    SDL_Colour ret { 0, 0, 0};
+    if( proportion < 1.0 / 6.0 ) {
+        ret.r = 255;
+        ret.b = 255 * 6 * proportion;
+    } else if( proportion < 2.0 / 6.0 ) {
+        ret.r = 255 * 6 * ( ( 2.0 / 6.0 ) - proportion );
+        ret.b = 255;
+    } else if( proportion < 3.0 / 6.0 ) {
+        ret.g = 255 * 6 * ( proportion - (2.0 / 6.0) );
+        ret.b = 255;
+    } else if( proportion < 4.0 / 6.0 ) {
+        ret.g = 255;
+        ret.b = 255 * 6 * ( ( 4.0 / 6.0 ) - proportion );
+    } else if( proportion < 5.0 / 6.0 ) {
+        ret.r = 255 * 6 * ( proportion - ( 4.0 / 6.0 ) );
+        ret.g = 255;
+    } else {
+        ret.r = 255;
+        ret.g = 255 * 6 * ( 1.0 - proportion );
+    }
+    return ret;
+}
+
+double average(double min_value, double max_value, double proportion) {
+    if(proportion < 0) proportion = 0;
+    else if(proportion > 1) proportion = 1;
+
+    return ( proportion * max_value ) + ( ( 1 - proportion ) * min_value );
+}
+
+double log_average( double min_value, double max_value, int base,
+                       double proportion ) {
+    if(proportion < 0) proportion = 0;
+    else if(proportion > 1) proportion = 1;
+
+    double first, second, power;
+
+    switch(base) {
+        case 0:
+        case 1:
+            first = log( min_value );
+            second = log( max_value );
+            power = M_E;
+            break;
+        case 2:
+            first = log2( min_value );
+            second = log2( max_value );
+            power = 2;
+            break;
+        case 10:
+            first = log10( min_value );
+            second = log10( max_value );
+            power = 10;
+            break;
+        default:
+            first = log( min_value ) / log( base );
+            second = log( max_value ) / log( base );
+            power = base;
+    }
+    return pow(power, ( ( 1 - proportion ) * first ) + ( proportion * second ) );
 }
 
 /* Free the SDL resources which have been used.
@@ -268,15 +303,11 @@ void set_scene( SDL_Renderer *r, SDL_Rect *graph_rect ) {
  * SDL_Window **w   -- The SDL window to be freed.
  * SDL_Rednerer **r -- The SDL renderer to be freed.
  */
-void close( SDL_Window **w, SDL_Renderer **r ) {
-    SDL_DestroyRenderer( *r );
-    SDL_DestroyWindow( *w );
-    *r = NULL;
-    *w = NULL;
+void close( ) {
 
     if( TTF_WasInit() )
         TTF_Quit();
 
-    SDL_Quit();
+    if( SDL_WasInit(SDL_INIT_VIDEO) )
+        SDL_Quit();
 }
-

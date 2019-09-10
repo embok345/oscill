@@ -9,9 +9,9 @@ WFLAGS = -Wall -Wno-unused-variable -Wno-unused-but-set-variable
 CFLAGS = -std=gnu++17 -g $(WFLAGS)
 LDFLAGS = -lm
 SDLFLAGS = -lSDL2 -lSDL2_ttf $(sdl2-config --libs --cflags)
-OBJS = sdl_util.o slider.o signals.o oscill.o
+OBJS = sdl_util.o signals.o slider.o oscill.o
 
-GLOB_DEPS = sdl_util.h consts.h
+GLOB_DEPS = slider.h sdl_util.h consts.h
 
 slider.o: slider.cpp slider.h $(GLOB_DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
