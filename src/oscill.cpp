@@ -5,6 +5,30 @@
 #include <iterator>
 #include <vector>
 
+void set_scene( SDL_WindowRenderer& r ) {
+
+    /* Clear the screen. */
+    SDL_SetRenderDrawColor( r.get_renderer(), 0, 0, 0, SDL_ALPHA_OPAQUE);
+    SDL_RenderClear( r.get_renderer() );
+
+    /* Draw the top and bottom guide lines. */
+    SDL_SetRenderDrawColor( r.get_renderer(), 255, 0, 0, SDL_ALPHA_OPAQUE);
+    SDL_RenderDrawLine( r.get_renderer(), 0, ZERO_LEVEL - MAX_AMPLITUDE,
+            SCREEN_WIDTH, ZERO_LEVEL - MAX_AMPLITUDE );
+    SDL_RenderDrawLine( r.get_renderer(), 0, ZERO_LEVEL + MAX_AMPLITUDE,
+            SCREEN_WIDTH, ZERO_LEVEL + MAX_AMPLITUDE );
+
+    /* Draw the center guide line. */
+    SDL_SetRenderDrawColor( r.get_renderer(), 0, 255, 0, SDL_ALPHA_OPAQUE);
+    SDL_RenderDrawLine( r.get_renderer(), 0, ZERO_LEVEL, SCREEN_WIDTH,
+            ZERO_LEVEL );
+    /* Draw a black line, otherwise the alpha goes weird.
+     * TODO i'm sure there is a correct way to make sure the blending
+     * doesn't go weird. */
+    SDL_SetRenderDrawColor( r.get_renderer(), 0, 0, 0, SDL_ALPHA_OPAQUE );
+    SDL_RenderDrawLine( r.get_renderer(), 0, 0, 2, 0 );
+}
+
 int main(int argc, char * args[]) {
 
     srand(time(NULL));
@@ -13,12 +37,14 @@ int main(int argc, char * args[]) {
     if( ! init( ) )
         return 1;
 
-    SDL_WindowRenderer graphs ( SCREEN_WIDTH, SCREEN_HEIGHT, "oscill" );
-    SDL_WindowRenderer settings ( SCREEN_WIDTH, SCREEN_HEIGHT, "Settings" );
+    auto graphs = new SDL_WindowRenderer( SCREEN_WIDTH, SCREEN_HEIGHT,
+            "oscill" );
+    auto settings = new SDL_WindowRenderer( SCREEN_WIDTH, SCREEN_HEIGHT,
+            "Settings" );
 
     int x, y;
-    SDL_GetWindowPosition( graphs.get_window(), &x, &y );
-    SDL_SetWindowPosition( settings.get_window(), x + SCREEN_WIDTH, y );
+    SDL_GetWindowPosition( graphs->get_window(), &x, &y );
+    SDL_SetWindowPosition( settings->get_window(), x + SCREEN_WIDTH, y );
 
     TTF_Font *font;
     if( !( font = get_font( ) ) )
@@ -30,64 +56,74 @@ int main(int argc, char * args[]) {
     int sample_rate = 50;
     /* The total time elapsed (not really). */
     time_t t = 0;
+    /* The number of pixels per second horizontally. */
+    int horizontal_scale = 100;
 
-    VerticalPane settings_root_pane ( 2 );
+    auto settings_root_pane = new VerticalPane( 30 );
 
-    Slider<int> sample_slider( SCREEN_WIDTH - 20, 40, &sample_rate,
+    auto sample_slider = new Slider<int>( SCREEN_WIDTH - 20, 40, &sample_rate,
             [](double p) {
                 return (int)average( MIN_SAMPLE_RATE, MAX_SAMPLE_RATE, p );
-            }, 0.5, "sample rate", font );
-    settings_root_pane.add_child( &sample_slider );
+            }, SDL_GetWindowID( settings->get_window() ), 0.5, "sample rate",
+            font );
+    auto horizontal_scale_slider = new Slider<int>( SCREEN_WIDTH - 20, 40,
+            &horizontal_scale,
+            [](double p) {
+                return (int)log_average( MIN_HORIZONTAL_SCALE,
+                        MAX_HORIZONTAL_SCALE, 10, p );
+            }, SDL_GetWindowID( settings->get_window() ), 0.5, "scale", font );
 
-    VerticalPane sliders_pane ( 2 );
-    settings_root_pane.add_child( &sliders_pane );
+    settings_root_pane->add_child( sample_slider );
+    settings_root_pane->add_child( horizontal_scale_slider );
+
+    auto sliders_pane = new VerticalPane( 20 );
+    settings_root_pane->add_child( sliders_pane );
 
     /* Create all of the generated signals. */
-    Wave carrier_wave = { 1.0, 0.0, 100.0};
-    Wave cos_wave = { 1.0, M_PI / 2, 100.0 };
-    Wave higher_wave = { 5.0, 0.0, 10.0 };
+    auto carrier_wave = new Wave(1.0, 0.0, 100.0);
 
-    Signal carrier ( graphs, sliders_pane, no_sample_points,
-            &carrier_wave, {255, 255, 255}, font );
-
-    Signal cos ( graphs, sliders_pane, no_sample_points, &cos_wave,
-            {0, 255, 0}, font );
+    auto carrier = new Signal( *graphs, *settings, sliders_pane,
+            no_sample_points, carrier_wave, {255, 255, 255}, font );
 
     std::vector<Signal*> signals;
-    signals.push_back(&carrier);
-    signals.push_back(&cos);
+    signals.push_back(carrier);
     std::vector<Signal*>::iterator it;
 
     class ButtonData {
       public:
-        SDL_WindowRenderer &r;
-        Pane &p;
+        SDL_WindowRenderer &graph;
+        SDL_WindowRenderer &set;
+        Pane *p;
         int &samples;
         TTF_Font *font;
         std::vector<Signal*> &signals;
-        ButtonData(SDL_WindowRenderer &r, Pane &p, int &samples,
-                        TTF_Font *font,std::vector<Signal*> &signals)
-                : r { r }, p { p }, samples { samples }, font { font },
-                  signals { signals } {}
+        ButtonData( SDL_WindowRenderer &graph, SDL_WindowRenderer &set,
+                       Pane *p, int &samples, TTF_Font *font,
+                       std::vector<Signal*> &signals )
+                : graph { graph }, set { set },  p { p }, samples { samples },
+                  font { font }, signals { signals } {}
     };
-    ButtonData *new_data = new ButtonData( graphs, sliders_pane,
+    auto new_data = new ButtonData( *graphs, *settings, sliders_pane,
             no_sample_points, font, signals );
-    Button add_signal_btn ( SCREEN_WIDTH - 20, 50, "Add Signal", font,
+    auto add_signal_btn = new Button( SCREEN_WIDTH - 20, 50, "Add Signal",
+            font,
             [](void *dat) {
                 ButtonData *data = (ButtonData *)dat;;
                 Wave *new_wave = new Wave(1.0, 0.0, 100.0);
-                Signal *new_signal = new Signal(data->r, data->p,
-                        data->samples, new_wave, {0, 0, 255}, data->font );
+                Signal *new_signal = new Signal(data->graph, data->set,
+                        data->p, data->samples, new_wave, {0, 0, 255},
+                        data->font );
                 data->signals.push_back(new_signal);
-                return (void *)NULL;
-             }, (void *)new_data);
-    settings_root_pane.add_child( &add_signal_btn );
+            }, (void *)new_data, SDL_GetWindowID( settings->get_window() ),
+            { 200, 200, 200 } );
+
+    settings_root_pane->add_child( add_signal_btn );
 
     /* Generate the initial state of the signals. */
     for(int i = 0; i < no_sample_points; i++) {
         it = signals.begin();
         while( it != signals.end() ) {
-            (*it)->update_point( i, t );
+            (*it)->update_point( i, t, horizontal_scale);
             ++it;
         }
         t += MS_PER_S / sample_rate;
@@ -115,7 +151,7 @@ int main(int argc, char * args[]) {
             }
         }
 
-        set_scene( graphs );
+        set_scene( *graphs );
 
         /* Draw the oldest samples. */
         for(int i = start_index; i < no_sample_points - 1; i++) {
@@ -152,15 +188,18 @@ int main(int argc, char * args[]) {
         /* Get the current sample. */
         it = signals.begin();
         while( it != signals.end() ) {
-            (*it)->update_point( start_index, t );
+            (*it)->update_point( start_index, t, horizontal_scale );
             ++it;
         }
 
         /* Draw the current render. */
-        SDL_RenderPresent( graphs.get_renderer() );
+        SDL_RenderPresent( graphs->get_renderer() );
 
-        settings_root_pane.render( settings.get_renderer(), 10, 10 );
-        SDL_RenderPresent( settings.get_renderer() );
+        SDL_SetRenderDrawColor( settings->get_renderer(), 255, 255, 255,
+                SDL_ALPHA_OPAQUE );
+        SDL_RenderClear( settings->get_renderer() );
+        settings_root_pane->render( settings->get_renderer(), 10, 10 );
+        SDL_RenderPresent( settings->get_renderer() );
 
         /* Update the total time, and wait the sample time. */
         start_index = (start_index + 1) % no_sample_points;
@@ -170,6 +209,20 @@ int main(int argc, char * args[]) {
     }
 
     /* Once the application has finished, clean up the SDL resources. */
+
+    delete settings_root_pane;
+    delete new_data;
+    it = signals.begin();
+    while( it != signals.end() ) {
+        delete *it;
+        it++;
+    }
+
+    TTF_CloseFont(font);
+
+    delete graphs;
+    delete settings;
+
     close( );
 
     return 0;

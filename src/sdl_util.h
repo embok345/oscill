@@ -53,8 +53,8 @@ int init();
 void close();
 TTF_Font *get_font( );
 int render_outlined_text( SDL_WindowRenderer&, TTF_Font *, const char *, int, int, bool = false);
-void set_scene( SDL_WindowRenderer& );
 SDL_Colour colour_proportion( double );
+
 double average( double, double, double );
 double log_average( double, double, int, double );
 

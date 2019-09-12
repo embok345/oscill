@@ -13,6 +13,9 @@
 #define MIN_SAMPLE_RATE 10
 #define MAX_SAMPLE_RATE 100
 
+#define MIN_HORIZONTAL_SCALE 10
+#define MAX_HORIZONTAL_SCALE 1000
+
 /* The maximum amplitude of the wave. */
 #define MAX_AMPLITUDE 180
 
@@ -21,8 +24,6 @@
 
 /* Milliseconds in a second. */
 #define MS_PER_S 1000.0
-
-#define PX_PER_S 100
 
 #define M_TAU (2 * M_PI)
 

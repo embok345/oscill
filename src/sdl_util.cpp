@@ -38,7 +38,7 @@ void find_mono_fonts( const char *dir_name, char ***fonts, int *current_fonts ) 
         printf("Couldn't open directory\n");
         return;
     }
-    chdir( dir_name );
+    if(! chdir( dir_name ) ) return;
 
     while( ( entry = readdir( dp ) ) != NULL ) {
         lstat( entry->d_name, &statbuf );
@@ -77,7 +77,7 @@ void find_mono_fonts( const char *dir_name, char ***fonts, int *current_fonts ) 
             }
         }
     }
-    chdir("..");
+    if( !chdir("..") );
     closedir(dp);
 
 }
@@ -94,7 +94,8 @@ void find_mono_fonts( const char *dir_name, char ***fonts, int *current_fonts ) 
 TTF_Font *get_font( void ) {
     TTF_Font *font;
 
-    static const char *default_font = "/usr/share/fonts/truetype/freefont/FreeMono.ttf";
+    static const char *default_font =
+            "/usr/share/fonts/truetype/freefont/FreeMono.ttf";
 
     /* Try to open the default font. */
     font = TTF_OpenFont( default_font, 24 );
@@ -127,134 +128,37 @@ TTF_Font *get_font( void ) {
     return font;
 }
 
-/* Render the text with an outline on screen. It is drawn in the given font at
- * the specified position, in white with a black outline. If centered is set to
- * true, the text will be drawn with center at the given x and y coordinates,
- * if false, the top left corner of the text shall be at the given coords.
- * ----------------------------------------------------------------------------
- * SDL_Renderer *r  -- The renderer to draw the text with.
- * TTF_Font *font   -- The font to render the text in.
- * const char *text -- The text to render.
- * int x            -- The x coordinate to render the text at.
- * int y            -- The y coordinate to render the text at.
- * bool centered    -- Determines if the coordinates define the center of the
- *                     text, or the top left of the text.
- *
- * return           -- 1 if the text was successfully renderer, 0 otherwise.
- */
-int render_outlined_text( SDL_WindowRenderer& r, TTF_Font *font, const char *text,
-                    int x, int y, bool centered) {
-    SDL_Color white = { 255, 255, 255 }, black = { 0, 0, 0 };
-
-    /* Set the rendered text to have an outline. */
-    int outline = 1;
-    TTF_SetFontOutline( font, outline );
-
-    /* Try to create the outline text. */
-    SDL_Surface *text_surface;
-    SDL_Color text_color = black;
-    if( !( text_surface = TTF_RenderText_Blended(font, text, text_color) ) ) {
-        printf( "Could not draw text. %s\n", TTF_GetError() );
-        return 0;
-    }
-    SDL_Texture *text_texture = SDL_CreateTextureFromSurface(r.get_renderer(),
-            text_surface);
-
-    /* Get the size of text. */
-    int text_width, text_height;
-    if( TTF_SizeText( font, text, &text_width, &text_height ) == -1 ) {
-        printf( "Could not get text size. %s\n", SDL_GetError() );
-        return 0;
-    }
-
-    /* Determine the location to render the text. */
-    SDL_Rect text_rect;
-    if( centered ) {
-        /* If the text is centered, the upper left is the x coordinate minus
-         * half the height, (resp. y). */
-        text_rect = { x - (text_width / 2), y - (text_height / 2),
-                text_width, text_height };
-
-        /* Have to fudge it if the width isn't a multiple of 2. */
-        if(text_width % 2 == 1)
-            text_rect.x -= 1;
-    } else {
-        /* If the text isn't centered, the x and y coordinates are just they.*/
-        text_rect = { x, y, text_width, text_height };
-    }
-
-    /* Render the outline text. */
-    SDL_RenderCopy( r.get_renderer(), text_texture, NULL, &text_rect );
-    SDL_FreeSurface( text_surface );
-
-    /* Draw now the inner text, in the same way. */
-    TTF_SetFontOutline( font, 0 );
-    text_color = white;
-    if( !( text_surface = TTF_RenderText_Blended( font, text, text_color ) ) ) {        printf( "Could not draw text. %s\n", TTF_GetError() );
-        return 0;
-    }
-    text_texture = SDL_CreateTextureFromSurface( r.get_renderer(),
-            text_surface );
-
-    text_rect.x+=1;
-    text_rect.y+=1;
-    text_rect.w-=1;
-    text_rect.h-=2;
-
-    SDL_RenderCopy( r.get_renderer(), text_texture, NULL, &text_rect );
-
-    SDL_FreeSurface( text_surface );
-
-    return 1;
-}
-
-void set_scene( SDL_WindowRenderer& r ) {
-
-    /* Clear the screen. */
-    SDL_SetRenderDrawColor( r.get_renderer(), 0, 0, 0, SDL_ALPHA_OPAQUE);
-    SDL_RenderClear( r.get_renderer() );
-
-    /* Draw the top and bottom guide lines. */
-    SDL_SetRenderDrawColor( r.get_renderer(), 255, 0, 0, SDL_ALPHA_OPAQUE);
-    SDL_RenderDrawLine( r.get_renderer(), 0, ZERO_LEVEL - MAX_AMPLITUDE,
-            SCREEN_WIDTH, ZERO_LEVEL - MAX_AMPLITUDE );
-    SDL_RenderDrawLine( r.get_renderer(), 0, ZERO_LEVEL + MAX_AMPLITUDE,
-            SCREEN_WIDTH, ZERO_LEVEL + MAX_AMPLITUDE );
-
-    /* Draw the center guide line. */
-    SDL_SetRenderDrawColor( r.get_renderer(), 0, 255, 0, SDL_ALPHA_OPAQUE);
-    SDL_RenderDrawLine( r.get_renderer(), 0, ZERO_LEVEL, SCREEN_WIDTH,
-            ZERO_LEVEL );
-    /* Draw a black line, otherwise the alpha goes weird.
-     * TODO i'm sure there is a correct way to make sure the blending
-     * doesn't go weird. */
-    SDL_SetRenderDrawColor( r.get_renderer(), 0, 0, 0, SDL_ALPHA_OPAQUE );
-    SDL_RenderDrawLine( r.get_renderer(), 0, 0, 2, 0 );
-}
-
 SDL_Colour colour_proportion(double proportion) {
     if(proportion < 0) proportion = 0;
     else if(proportion > 1) proportion = 1;
 
+    double divisions = 8.0;
+
     SDL_Colour ret { 0, 0, 0};
-    if( proportion < 1.0 / 6.0 ) {
+    if( proportion < 1 / divisions ) {
         ret.r = 255;
-        ret.b = 255 * 6 * proportion;
-    } else if( proportion < 2.0 / 6.0 ) {
-        ret.r = 255 * 6 * ( ( 2.0 / 6.0 ) - proportion );
+        ret.b = 255 * divisions * proportion;
+    } else if( proportion < 2 / divisions ) {
+        ret.r = 255 * divisions * ( ( 2.0 / divisions ) - proportion );
         ret.b = 255;
-    } else if( proportion < 3.0 / 6.0 ) {
-        ret.g = 255 * 6 * ( proportion - (2.0 / 6.0) );
+    } else if( proportion < 3 / divisions ) {
+        ret.g = 255 * divisions * ( proportion - (2.0 / divisions) );
         ret.b = 255;
-    } else if( proportion < 4.0 / 6.0 ) {
+    } else if( proportion < 4 / divisions ) {
         ret.g = 255;
-        ret.b = 255 * 6 * ( ( 4.0 / 6.0 ) - proportion );
-    } else if( proportion < 5.0 / 6.0 ) {
-        ret.r = 255 * 6 * ( proportion - ( 4.0 / 6.0 ) );
+        ret.b = 255 * divisions * ( ( 4 / divisions ) - proportion );
+    } else if( proportion < 5 / divisions ) {
+        ret.r = 255 * divisions * ( proportion - ( 4 / divisions ) );
         ret.g = 255;
+    } else if( proportion < 6 / divisions ) {
+        ret.r = 255;
+        ret.g = 255 * divisions * ( ( 6 / divisions ) - proportion );
+    } else if( proportion < 7 / divisions ) {
+        ret.r = 255 * divisions * ( ( 7 / divisions ) - proportion );
     } else {
-        ret.r = 255;
-        ret.g = 255 * 6 * ( 1.0 - proportion );
+        ret.r = 255 * divisions * ( proportion - ( 7 / divisions ) );
+        ret.g = 255 * divisions * ( proportion - ( 7 / divisions ) );
+        ret.b = 255 * divisions * ( proportion - ( 7 / divisions ) );
     }
     return ret;
 }
