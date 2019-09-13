@@ -1,11 +1,22 @@
-#include "signals.h"
+#include "signals.h"r
+#include <algorithm>
 
 SDL_Point Signal::update_point( int index, time_t t, int scale ) {
     index %= no_points;
     points[index].x = ( t / MS_PER_S ) * scale;
     double y = 0;
     unsigned int arr_len = std::size( waves );
+
     for( unsigned int i = 0; i < arr_len; i++) {
+
+        if( waves[i]->frequency != waves[i]->old_frequency ) {
+            waves[i]->phase = (M_TAU * ( t / MS_PER_S ) *
+                    ( waves[i]->old_frequency - waves[i]->frequency )) +
+                    waves[i]->phase;
+            waves[i]->phase -= floor( waves[i]->phase / M_TAU ) * M_TAU;
+            waves[i]->old_frequency = waves[i]->frequency;
+        }
+
         y += waves[i]->amplitude *
                 sin( ( M_TAU * waves[i]->frequency * ( t / MS_PER_S ) ) +
                 waves[i]->phase);
@@ -60,36 +71,19 @@ void Signal::draw_line( int i, int opacity ) {
                 ZERO_LEVEL - y1, x2, ZERO_LEVEL - y2 );
 
     }
-    /*if( x1 <= x2 && abs(y1) < MAX_AMPLITUDE && abs(y2) < MAX_AMPLITUDE ) {
-        SDL_RenderDrawLine( signal_window.get_renderer(), x1,
-                ZERO_LEVEL - points[ i ].y, x2, ZERO_LEVEL - points[ i2 ].y );
-    }*/
     SDL_SetRenderDrawColor( signal_window.get_renderer(), 0, 0, 0,
             SDL_ALPHA_OPAQUE );
 }
 
 void Signal::add_wave(Wave *w) {
     waves.push_back(w);
+    add_slider( w );
+}
 
-    auto frequency_slider = new Slider<double>( (SCREEN_WIDTH / 2) - 20, 40,
-            &(w->frequency),
-            [](double p) {
-                return log_average( MIN_FREQUENCY, MAX_FREQUENCY, 10, p);
-            }, SDL_GetWindowID( settings_window.get_window() ), 0.5,
-            "frequency", font );
-
-    auto amplitude_slider = new Slider<double>( (SCREEN_WIDTH / 2) - 20, 40,
-            &(w->amplitude),
-            [](double p) {
-                return average( 20, MAX_AMPLITUDE, p );
-            }, SDL_GetWindowID( settings_window.get_window() ), 0.5,
-            "amplitude", font );
-
-    auto wave_pane = new HorizontalPane( 5 );
-    wave_pane->add_child( frequency_slider );
-    wave_pane->add_child( amplitude_slider );
-
-    wave_settings_pane->add_child( wave_pane );
+void Signal::remove_wave( Wave *w, Pane *p ) {
+    if( waves.size() <= 1 ) return;
+    waves.erase(std::remove( waves.begin(), waves.end(), w ), waves.end());
+    wave_settings_pane->remove_child( p );
 }
 
 void Signal::create_sliders( ) {
@@ -99,24 +93,7 @@ void Signal::create_sliders( ) {
 
     std::vector<Wave*>::iterator it = waves.begin();
     while( it != waves.end() ) {
-        auto frequency_slider = new Slider<double>( (SCREEN_WIDTH / 2) - 20,
-            40, &((*it)->frequency),
-            [](double p) {
-                return log_average( MIN_FREQUENCY, MAX_FREQUENCY, 10, p);
-            }, SDL_GetWindowID( settings_window.get_window() ), 0.5,
-            "frequency", font );
-
-        auto amplitude_slider = new Slider<double>( (SCREEN_WIDTH / 2) - 20,
-            40, &((*it)->amplitude),
-            [](double p) { return average( 20, MAX_AMPLITUDE, p ); },
-            SDL_GetWindowID( settings_window.get_window() ), 0.5,
-            "amplitude", font );
-
-        auto wave_pane = new HorizontalPane( 5 );
-        wave_pane->add_child( frequency_slider );
-        wave_pane->add_child( amplitude_slider );
-
-        wave_settings_pane->add_child( wave_pane );
+        add_slider( *it );
         it++;
     }
 
@@ -139,6 +116,44 @@ void Signal::create_sliders( ) {
     signal_settings_pane->add_child( other_options_pane );
 
     root_settings_pane->add_child( signal_settings_pane );
+}
+
+void Signal::add_slider( Wave *w ) {
+
+    int window_id = SDL_GetWindowID( settings_window.get_window() );
+
+    auto frequency_slider = new Slider<double>( (SCREEN_WIDTH / 2) - 30,
+            40, &(w->frequency),
+            [](double p) {
+                auto new_freq =
+                        log_average( MIN_FREQUENCY, MAX_FREQUENCY, 10, p);
+                return new_freq;
+            }, window_id, 0.5, "frequency", font );
+
+    auto amplitude_slider = new Slider<double>( (SCREEN_WIDTH / 2) - 30,
+            40, &(w->amplitude),
+            [](double p) { return average( 20, MAX_AMPLITUDE, p ); },
+            window_id, 0.5, "amplitude", font );
+
+    auto wave_pane = new HorizontalPane( 5 );
+
+    struct btn_data {
+        Wave *w;
+        Pane *p;
+        Signal *self;
+    };
+    auto data = new btn_data { w, wave_pane, this };
+    auto remove_wave_btn = new Button( 30, 40, "X", font,
+            [](void *dat) {
+                auto data = (btn_data*)dat;
+                data->self->remove_wave( data->w, data->p );
+            }, (void *)data, window_id );
+
+    wave_pane->add_child( frequency_slider );
+    wave_pane->add_child( amplitude_slider );
+    wave_pane->add_child( remove_wave_btn );
+
+    wave_settings_pane->add_child( wave_pane );
 }
 
 Signal operator+(Wave *w, const Signal &s) {

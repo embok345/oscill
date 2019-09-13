@@ -6,11 +6,11 @@
 
 class Button : public Child {
 
-    SDL_Rect background;
-
     void (*callback)(void *data);
     void *data;
     int listening_window;
+    SDL_Rect click_location = { 0, 0, 0, 0 };
+    bool click_enabled = false;
 
     Label label;
     SDL_Colour c;
@@ -24,6 +24,8 @@ class Button : public Child {
                SDL_Colour c = { 255, 0, 0 });
 
     virtual void render( SDL_Renderer *, int, int ) override;
+
+    bool is_enabled();
 
 };
 

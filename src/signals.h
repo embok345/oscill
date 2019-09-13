@@ -20,8 +20,11 @@ class Wave {
     double phase;
     double amplitude;
 
+    double old_frequency;
+
     Wave(double frequency, double phase, double amplitude)
-        : frequency { frequency }, phase { phase }, amplitude { amplitude } {}
+        : frequency { frequency }, phase { phase }, amplitude { amplitude },
+          old_frequency { frequency } {}
 };
 
 class Signal {
@@ -54,6 +57,9 @@ class Signal {
     }
 
     void create_sliders( );
+    void add_wave(Wave *);
+    void remove_wave( Wave *, Pane * );
+    void add_slider(Wave *);
 
   public:
 
@@ -82,7 +88,6 @@ class Signal {
 
     virtual SDL_Point update_point( int, time_t, int );
 
-    void add_wave(Wave *);
     void draw_line( int, int );
 
     friend Signal operator+(const Signal &, const Signal &);

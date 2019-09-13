@@ -59,7 +59,8 @@ int main(int argc, char * args[]) {
     /* The number of pixels per second horizontally. */
     int horizontal_scale = 100;
 
-    auto settings_root_pane = new VerticalPane( 30 );
+    auto settings_root_pane = new ScrollPane( SCREEN_HEIGHT, SCREEN_WIDTH,
+            new VerticalPane( 30 ) );
 
     auto sample_slider = new Slider<int>( SCREEN_WIDTH - 20, 40, &sample_rate,
             [](double p) {
@@ -89,7 +90,7 @@ int main(int argc, char * args[]) {
     signals.push_back(carrier);
     std::vector<Signal*>::iterator it;
 
-    class ButtonData {
+    struct ButtonData {
       public:
         SDL_WindowRenderer &graph;
         SDL_WindowRenderer &set;
@@ -97,14 +98,9 @@ int main(int argc, char * args[]) {
         int &samples;
         TTF_Font *font;
         std::vector<Signal*> &signals;
-        ButtonData( SDL_WindowRenderer &graph, SDL_WindowRenderer &set,
-                       Pane *p, int &samples, TTF_Font *font,
-                       std::vector<Signal*> &signals )
-                : graph { graph }, set { set },  p { p }, samples { samples },
-                  font { font }, signals { signals } {}
     };
-    auto new_data = new ButtonData( *graphs, *settings, sliders_pane,
-            no_sample_points, font, signals );
+    auto new_data = new ButtonData{ *graphs, *settings, sliders_pane,
+            no_sample_points, font, signals };
     auto add_signal_btn = new Button( SCREEN_WIDTH - 20, 50, "Add Signal",
             font,
             [](void *dat) {
@@ -198,7 +194,7 @@ int main(int argc, char * args[]) {
         SDL_SetRenderDrawColor( settings->get_renderer(), 255, 255, 255,
                 SDL_ALPHA_OPAQUE );
         SDL_RenderClear( settings->get_renderer() );
-        settings_root_pane->render( settings->get_renderer(), 10, 10 );
+        settings_root_pane->render( settings->get_renderer(), 0, 0 );
         SDL_RenderPresent( settings->get_renderer() );
 
         /* Update the total time, and wait the sample time. */

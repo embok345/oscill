@@ -11,5 +11,6 @@
 #include "layout/Pane.h"
 #include "layout/HorizontalPane.h"
 #include "layout/VerticalPane.h"
+#include "layout/ScrollPane.h"
 
 #endif

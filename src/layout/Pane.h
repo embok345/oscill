@@ -2,6 +2,7 @@
 #define PANE_H
 
 #include "Child.h"
+#include <algorithm>
 
 class Pane : public Child {
 
@@ -21,6 +22,9 @@ class Pane : public Child {
 
     virtual void add_child( Child *c ) {
         children.push_back( c );
+    }
+    virtual void remove_child( Child *c ) {
+        children.erase(std::remove(children.begin(), children.end(), c), children.end());
     }
 };
 
